@@ -195,9 +195,7 @@ class Templategen:
         istext = self._is_text(filetype)
         self.log.dbg(f'filetype \"{src}\": {filetype}')
         self.log.dbg(f'is text \"{src}\": {istext}')
-        if not istext:
-            return self._handle_bin_file(src)
-        return self._handle_text_file(src)
+        return self._handle_text_file(src) if istext else self._handle_bin_file(src)
 
     @classmethod
     def _is_text(cls, fileoutput):
@@ -205,11 +203,7 @@ class Templategen:
         out = fileoutput.lower()
         if out.startswith('text'):
             return True
-        if 'empty' in out:
-            return True
-        if 'json' in out:
-            return True
-        return False
+        return True if 'empty' in out else 'json' in out
 
     def _template_loader(self, relpath):
         """manually load template when outside of base"""
@@ -270,18 +264,16 @@ class Templategen:
         # is a directory
         for entry in os.listdir(path):
             fpath = os.path.join(path, entry)
-            if not os.path.isfile(fpath):
-                # recursively explore directory
-                if Templategen.path_is_template(fpath,
-                                                ignore=ignore,
-                                                debug=debug):
-                    return True
-            else:
+            if os.path.isfile(fpath):
                 # check if file is a template
                 if Templategen._is_template(fpath,
                                             ignore=ignore,
                                             debug=debug):
                     return True
+            elif Templategen.path_is_template(fpath,
+                                                ignore=ignore,
+                                                debug=debug):
+                return True
         return False
 
     @staticmethod
@@ -295,8 +287,7 @@ class Templategen:
         for key in dic:
             value = dic[key]
             if isinstance(value, str):
-                isit = Templategen.string_is_template(value)
-                if isit:
+                if isit := Templategen.string_is_template(value):
                     return True
             elif isinstance(value, dict):
                 return Templategen.dict_is_template(value)

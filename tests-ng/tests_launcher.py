@@ -56,20 +56,14 @@ def get_tests():
     tests = []
     cur = os.path.dirname(sys.argv[0])
     for (_, _, filenames) in os.walk(cur):
-        for path in filenames:
-            if not path.endswith('.sh'):
-                continue
-            tests.append(path)
+        tests.extend(path for path in filenames if path.endswith('.sh'))
         break
     return tests
 
 
 def main():
     """entry point"""
-    max_jobs = None  # number of processor
-    if len(sys.argv) > 1:
-        max_jobs = int(sys.argv[1])
-
+    max_jobs = int(sys.argv[1]) if len(sys.argv) > 1 else None
     tests = get_tests()
 
     logfd = sys.stdout

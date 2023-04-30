@@ -194,9 +194,7 @@ def samefile(path1, path2):
     """return True if represent the same file"""
     if not os.path.exists(path1):
         return False
-    if not os.path.exists(path2):
-        return False
-    return os.path.samefile(path1, path2)
+    return os.path.samefile(path1, path2) if os.path.exists(path2) else False
 
 
 def header():
@@ -206,11 +204,7 @@ def header():
 
 def content_empty(string):
     """return True if is empty or only one CRLF"""
-    if not string:
-        return True
-    if string == b'\n':
-        return True
-    return False
+    return string == b'\n' if string else True
 
 
 def strip_home(path):
@@ -294,22 +288,23 @@ def patch_ignores(ignores, prefix, debug=False):
         if os.path.isabs(ignore):
             # is absolute
             if negative:
-                new.append('!' + ignore)
+                new.append(f'!{ignore}')
             else:
                 new.append(ignore)
             continue
-        if STAR in ignore:
-            if ignore.startswith(STAR) or ignore.startswith(os.sep):
+        if STAR in ignore and (
+            ignore.startswith(STAR) or ignore.startswith(os.sep)
+        ):
                 # is glob
-                if negative:
-                    new.append('!' + ignore)
-                else:
-                    new.append(ignore)
-                continue
+            if negative:
+                new.append(f'!{ignore}')
+            else:
+                new.append(ignore)
+            continue
         # patch ignore
         path = os.path.join(prefix, ignore)
         if negative:
-            new.append('!' + path)
+            new.append(f'!{path}')
         else:
             new.append(path)
     LOG.dbg(f'ignores after patching: {new}', force=debug)
@@ -432,17 +427,17 @@ def get_umask():
 
 def get_default_file_perms(path, umask):
     """get default rights for a file"""
-    base = 0o666
-    if os.path.isdir(path):
-        base = 0o777
+    base = 0o777 if os.path.isdir(path) else 0o666
     return base - umask
 
 
 def get_file_perm(path):
     """return file permission"""
-    if not os.path.exists(path):
-        return 0o777
-    return os.stat(path, follow_symlinks=True).st_mode & 0o777
+    return (
+        os.stat(path, follow_symlinks=True).st_mode & 0o777
+        if os.path.exists(path)
+        else 0o777
+    )
 
 
 def chmod(path, mode, debug=False):
@@ -559,6 +554,4 @@ def is_bin_in_path(command):
         bpath = shutil.which(binary)
     except shutil.Error:
         return False
-    if not bpath:
-        return False
-    return os.path.exists(bpath)
+    return os.path.exists(bpath) if bpath else False

@@ -77,19 +77,13 @@ def create_random_file(directory, content=None,
                        binary=False, template=False):
     """Create a new file in directory with random content"""
     fname = get_string(8)
-    mode = 'w'
-    if binary:
-        mode = 'wb'
+    mode = 'wb' if binary else 'w'
     if content is None:
         if binary:
-            pre = bytes()
-            if template:
-                pre = bytes('{{@@ header() @@}}\n', 'ascii')
+            pre = bytes('{{@@ header() @@}}\n', 'ascii') if template else bytes()
             content = bytes(f'{pre}{get_string(100)}\n', 'ascii')
         else:
-            pre = ''
-            if template:
-                pre = '{{@@ header() @@}}\n'
+            pre = '{{@@ header() @@}}\n' if template else ''
             content = f'{pre}{get_string(100)}\n'
     path = os.path.join(directory, fname)
     # pylint: disable=W1514
@@ -100,9 +94,7 @@ def create_random_file(directory, content=None,
 
 def edit_content(path, newcontent, binary=False):
     """edit file content"""
-    mode = 'w'
-    if binary:
-        mode = 'wb'
+    mode = 'wb' if binary else 'w'
     # pylint: disable=W1514
     with open(path, mode) as file:
         file.write(newcontent)
@@ -116,44 +108,42 @@ def create_dir(path):
 
 
 def _fake_args():
-    args = {}
-    args['--verbose'] = True
-    args['--no-banner'] = False
-    args['--dry'] = False
-    args['--force'] = False
-    args['--nodiff'] = False
-    args['--showdiff'] = True
-    args['--link'] = 'nolink'
-    args['--template'] = False
-    args['--temp'] = False
-    args['<key>'] = []
-    args['--dopts'] = ''
-    args['--file'] = []
-    args['--ignore'] = []
-    args['<path>'] = []
-    args['--key'] = False
-    args['--ignore'] = []
-    args['--show-patch'] = False
-    args['--force-actions'] = False
-    args['--grepable'] = False
-    args['--as'] = None
-    args['--file-only'] = False
-    args['--workers'] = 1
-    args['--preserve-mode'] = False
-    args['--ignore-missing'] = False
-    args['--workdir-clear'] = False
-    args['--transw'] = ''
-    args['--transr'] = ''
-    # cmds
-    args['profiles'] = False
-    args['files'] = False
-    args['install'] = False
-    args['compare'] = False
-    args['import'] = False
-    args['update'] = False
-    args['detail'] = False
-    args['remove'] = False
-    return args
+    return {
+        '--verbose': True,
+        '--no-banner': False,
+        '--dry': False,
+        '--force': False,
+        '--nodiff': False,
+        '--showdiff': True,
+        '--link': 'nolink',
+        '--template': False,
+        '--temp': False,
+        '<key>': [],
+        '--dopts': '',
+        '--file': [],
+        '<path>': [],
+        '--key': False,
+        '--ignore': [],
+        '--show-patch': False,
+        '--force-actions': False,
+        '--grepable': False,
+        '--as': None,
+        '--file-only': False,
+        '--workers': 1,
+        '--preserve-mode': False,
+        '--ignore-missing': False,
+        '--workdir-clear': False,
+        '--transw': '',
+        '--transr': '',
+        'profiles': False,
+        'files': False,
+        'install': False,
+        'compare': False,
+        'import': False,
+        'update': False,
+        'detail': False,
+        'remove': False,
+    }
 
 
 def load_options(confpath, profile):
@@ -179,7 +169,7 @@ def load_options(confpath, profile):
 def get_path_strip_version(path):
     """Return the path of a file as stored in yaml config"""
     path = strip_home(path)
-    path = path.lstrip('.' + os.sep)
+    path = path.lstrip(f'.{os.sep}')
     return path
 
 
@@ -191,8 +181,7 @@ def get_dotfile_from_yaml(dic, path):
     home = os.path.expanduser('~')
     if path.startswith(home):
         path = path.replace(home, '~')
-    dotfile = [d for d in dotfiles.values() if d['dst'] == path]
-    if dotfile:
+    if dotfile := [d for d in dotfiles.values() if d['dst'] == path]:
         return dotfile[0]
     return None
 
@@ -270,11 +259,7 @@ def file_in_yaml(yaml_file, path, link=False):
     """Return whether path is in the given yaml file as a dotfile."""
     strip = get_path_strip_version(path)
 
-    if isinstance(yaml_file, str):
-        yaml_conf = yaml_load(yaml_file)
-    else:
-        yaml_conf = yaml_file
-
+    yaml_conf = yaml_load(yaml_file) if isinstance(yaml_file, str) else yaml_file
     dotfiles = yaml_conf['dotfiles'].values()
 
     in_src = any(x['src'].endswith(strip) for x in dotfiles)

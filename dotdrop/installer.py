@@ -185,8 +185,7 @@ class Installer:
         apply_chmod = linktype in [LinkTypes.NOLINK, LinkTypes.LINK_CHILDREN]
         apply_chmod = apply_chmod and os.path.exists(dst)
         apply_chmod = apply_chmod and (ret or (not ret and not err))
-        apply_chmod = apply_chmod and chmod != CfgYaml.chmod_ignore
-        if apply_chmod:
+        if apply_chmod := apply_chmod and chmod != CfgYaml.chmod_ignore:
             if not chmod:
                 chmod = utils.get_file_perm(src)
             self.log.dbg(f'applying chmod {chmod:o} to {dst}')
@@ -416,9 +415,8 @@ class Installer:
                 # void actionexec if dotfile installed
                 # to prevent from running actions multiple times
                 actionexec = None
-            else:
-                if err:
-                    return ret, err
+            elif err:
+                return ret, err
 
         return installed > 0, None
 
@@ -587,36 +585,34 @@ class Installer:
         for entry in os.listdir(src):
             fpath = os.path.join(src, entry)
             self.log.dbg(f'deploy sub from {dst}: {entry}')
-            if not os.path.isdir(fpath):
-                # is file
-                res, err = self._copy_file(templater, fpath,
-                                           os.path.join(dst, entry),
-                                           actionexec=actionexec,
-                                           noempty=noempty,
-                                           ignore=ignore,
-                                           is_template=is_template)
-                if not res and err:
-                    # error occured
-                    return res, err
+            res, err = (
+                self._copy_dir(
+                    templater,
+                    fpath,
+                    os.path.join(dst, entry),
+                    actionexec=actionexec,
+                    noempty=noempty,
+                    ignore=ignore,
+                    is_template=is_template,
+                )
+                if os.path.isdir(fpath)
+                else self._copy_file(
+                    templater,
+                    fpath,
+                    os.path.join(dst, entry),
+                    actionexec=actionexec,
+                    noempty=noempty,
+                    ignore=ignore,
+                    is_template=is_template,
+                )
+            )
+            if not res and err:
+                # error occured
+                return res, err
 
-                if res:
-                    # something got installed
-                    ret = True, None
-            else:
-                # is directory
-                res, err = self._copy_dir(templater, fpath,
-                                          os.path.join(dst, entry),
-                                          actionexec=actionexec,
-                                          noempty=noempty,
-                                          ignore=ignore,
-                                          is_template=is_template)
-                if not res and err:
-                    # error occured
-                    return res, err
-
-                if res:
-                    # something got installed
-                    ret = True, None
+            if res:
+                # something got installed
+                ret = True, None
         return ret
 
     @classmethod
@@ -631,9 +627,7 @@ class Installer:
             except NotADirectoryError as exc:
                 err = f'opening dest file: {exc}'
                 return False, err
-            except OSError as exc:
-                return False, str(exc)
-            except TypeError as exc:
+            except (OSError, TypeError) as exc:
                 return False, str(exc)
         else:
             # copy file
@@ -670,10 +664,9 @@ class Installer:
                     err = f'broken symlink {dst}'
                     return False, err
 
-            if self.diff:
-                if not self._is_different(src, dst, content=content):
-                    self.log.dbg(f'{dst} is the same')
-                    return False, None
+            if self.diff and not self._is_different(src, dst, content=content):
+                self.log.dbg(f'{dst} is the same')
+                return False, None
 
             if self.safe:
                 self.log.dbg(f'change detected for {dst}')
@@ -702,8 +695,8 @@ class Installer:
         self.log.dbg(f'installing file to \"{dst}\"')
         # re-check in case action created the file
         if self.safe and not overwrite and \
-                os.path.lexists(dst) and \
-                not self.log.ask(f'Overwrite \"{dst}\"'):
+                    os.path.lexists(dst) and \
+                    not self.log.ask(f'Overwrite \"{dst}\"'):
             self.log.warn(f'ignoring {dst}')
             return False, 'aborted'
 
@@ -719,10 +712,7 @@ class Installer:
 
     @classmethod
     def _get_tmp_file_vars(cls, src, dst):
-        tmp = {}
-        tmp['_dotfile_sub_abs_src'] = src
-        tmp['_dotfile_sub_abs_dst'] = dst
-        return tmp
+        return {'_dotfile_sub_abs_src': src, '_dotfile_sub_abs_dst': dst}
 
     def _is_different(self, src, dst, content=None):
         """
@@ -813,11 +803,10 @@ class Installer:
             return boolean, err
         if boolean:
             self.log.dbg('install: SUCCESS')
+        elif err:
+            self.log.dbg(f'install: ERROR: {err}')
         else:
-            if err:
-                self.log.dbg(f'install: ERROR: {err}')
-            else:
-                self.log.dbg('install: IGNORED')
+            self.log.dbg('install: IGNORED')
         return boolean, err
 
     def _check_paths(self, src, dst):

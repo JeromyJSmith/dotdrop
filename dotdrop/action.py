@@ -62,9 +62,7 @@ class Cmd(DictParser):
     def execute(self, templater=None, debug=False):
         """execute the command in the shell"""
         ret = 1
-        action = self.action
-        if templater:
-            action = self._get_action(templater, debug)
+        action = self._get_action(templater, debug) if templater else self.action
         args = self._get_args(templater)
         if debug and args:
             self.log.dbg('action args:')
@@ -138,8 +136,7 @@ class Action(Cmd):
         return cls(key=key, **val)
 
     def __str__(self):
-        out = f'{self.key}: [{self.kind}] \"{self.action}\"'
-        return out
+        return f'{self.key}: [{self.kind}] \"{self.action}\"'
 
     def __repr__(self):
         return f'action({self.__str__()})'

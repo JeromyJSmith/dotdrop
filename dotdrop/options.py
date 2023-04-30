@@ -209,10 +209,7 @@ class Options(AttrMonitor):
 
         # look in /etc/dotdrop
         path = os.path.join(ETCCFG, name)
-        if os.path.exists(path):
-            return path
-
-        return ''
+        return path if os.path.exists(path) else ''
 
     def _get_config_path(self):
         """get the config path"""
@@ -236,23 +233,19 @@ class Options(AttrMonitor):
             self.log.dbg(f'config from toml in current dir {CONFIGFILETOML}')
             return CONFIGFILETOML
 
-        path = self._get_config_from_env(CONFIGFILEYAML)
-        if path:
+        if path := self._get_config_from_env(CONFIGFILEYAML):
             self.log.dbg(f'config from env with {CONFIGFILEYAML}')
             return path
 
-        path = self._get_config_from_env(CONFIGFILETOML)
-        if path:
+        if path := self._get_config_from_env(CONFIGFILETOML):
             self.log.dbg(f'config from env with {CONFIGFILETOML}')
             return path
 
-        path = self._get_config_from_fs(CONFIGFILEYAML)
-        if path:
+        if path := self._get_config_from_fs(CONFIGFILEYAML):
             self.log.dbg(f'config from fs with {CONFIGFILEYAML}')
             return path
 
-        path = self._get_config_from_fs(CONFIGFILETOML)
-        if path:
+        if path := self._get_config_from_fs(CONFIGFILETOML):
             self.log.dbg(f'config from fs with {CONFIGFILETOML}')
             return path
 

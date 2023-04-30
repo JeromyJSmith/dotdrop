@@ -27,13 +27,9 @@ class DictParser:
         except AttributeError:
             pass
         newv = cls._adjust_yaml_keys(tmp)
-        if not key:
-            return cls(**newv)
-        return cls(key=key, **newv)
+        return cls(key=key, **newv) if key else cls(**newv)
 
     @classmethod
     def parse_dict(cls, items):
         """parse a dictionary and construct object 'cls'"""
-        if not items:
-            return []
-        return [cls.parse(k, v) for k, v in items.items()]
+        return [cls.parse(k, v) for k, v in items.items()] if items else []

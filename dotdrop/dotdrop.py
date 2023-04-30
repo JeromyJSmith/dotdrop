@@ -43,7 +43,7 @@ def action_executor(opts, actions, defactions, templater, post=False):
         True, None if ok
         False, errstring if issue
         """
-        actiontype = 'pre' if not post else 'post'
+        actiontype = 'post' if post else 'pre'
 
         # execute default actions
         for action in defactions:
@@ -70,6 +70,7 @@ def action_executor(opts, actions, defactions, templater, post=False):
                 LOG.err(err)
                 return False, err
         return True, None
+
     return execute
 
 
@@ -83,9 +84,7 @@ def _dotfile_update(opts, path, key=False):
                       ignore=opts.update_ignore,
                       showpatch=opts.update_showpatch,
                       ignore_missing_in_dotdrop=opts.ignore_missing_in_dotdrop)
-    if key:
-        return updater.update_key(path)
-    return updater.update_path(path)
+    return updater.update_key(path) if key else updater.update_path(path)
 
 
 def _dotfile_compare(opts, dotfile, tmp):
@@ -270,19 +269,17 @@ def _dotfile_install(opts, dotfile, tmpdir=None):
             post_actions_exec = action_executor(opts, postactions, defactions,
                                                 templ, post=True)
             post_actions_exec()
-    else:
-        # dotfile was NOT installed
-        if opts.install_force_action:
-            # pre-actions
-            LOG.dbg('force pre action execution ...')
-            pre_actions_exec()
-            # post-actions
-            LOG.dbg('force post action execution ...')
-            defactions = opts.install_default_actions_post
-            postactions = dotfile.get_post_actions()
-            post_actions_exec = action_executor(opts, postactions, defactions,
-                                                templ, post=True)
-            post_actions_exec()
+    elif opts.install_force_action:
+        # pre-actions
+        LOG.dbg('force pre action execution ...')
+        pre_actions_exec()
+        # post-actions
+        LOG.dbg('force post action execution ...')
+        defactions = opts.install_default_actions_post
+        postactions = dotfile.get_post_actions()
+        post_actions_exec = action_executor(opts, postactions, defactions,
+                                            templ, post=True)
+        post_actions_exec()
 
     return ret, dotfile.key, err
 
@@ -310,11 +307,7 @@ def cmd_install(opts):
     lfs = [k.key for k in dotfiles]
     LOG.dbg(f'dotfiles registered for install: {lfs}')
 
-    # the installer
-    tmpdir = None
-    if opts.install_temporary:
-        tmpdir = get_tmpdir()
-
+    tmpdir = get_tmpdir() if opts.install_temporary else None
     installed = []
 
     # clear the workdir
@@ -361,7 +354,7 @@ def cmd_install(opts):
                 LOG.err(f'installing \"{key}\" failed: {err}')
 
     # execute profile post-action
-    if len(installed) > 0 or opts.install_force_action:
+    if installed or opts.install_force_action:
         msg = f'run {len(pro_post_actions)} profile post actions'
         LOG.dbg(msg)
         ret, _ = action_executor(opts, pro_post_actions,
@@ -407,9 +400,8 @@ def _workdir_enum(opts):
             for child in children:
                 if child in workdir_files:
                     workdir_files.remove(child)
-        else:
-            if newpath in workdir_files:
-                workdir_files.remove(newpath)
+        elif newpath in workdir_files:
+            workdir_files.remove(newpath)
     for wfile in workdir_files:
         line = f'=> \"{wfile}\" does not exist in dotdrop'
         LOG.log(line)
@@ -576,9 +568,7 @@ def cmd_files(opts):
     if opts.profile not in [p.key for p in opts.profiles]:
         LOG.warn(f'unknown profile \"{opts.profile}\"')
         return
-    what = 'Dotfile(s)'
-    if opts.files_templateonly:
-        what = 'Template(s)'
+    what = 'Template(s)' if opts.files_templateonly else 'Dotfile(s)'
     LOG.emph(f'{what} for profile \"{opts.profile}\":\n')
     for dotfile in opts.dotfiles:
         if opts.files_templateonly:
@@ -590,10 +580,7 @@ def cmd_files(opts):
             fmt += f'dst:{dotfile.dst},'
             fmt += f'src:{dotfile.src},'
             fmt += f'link:{dotfile.link.name.lower()}'
-            if dotfile.chmod:
-                fmt += f',chmod:{dotfile.chmod:o}'
-            else:
-                fmt += ',chmod:None'
+            fmt += f',chmod:{dotfile.chmod:o}' if dotfile.chmod else ',chmod:None'
             LOG.raw(fmt)
         else:
             LOG.log(f'{dotfile.key}', bold=True)
@@ -716,31 +703,37 @@ def cmd_remove(opts):
 
 def _get_install_installer(opts, tmpdir=None):
     """get an installer instance for cmd_install"""
-    inst = Installer(create=opts.create, backup=opts.backup,
-                     dry=opts.dry, safe=opts.safe,
-                     base=opts.dotpath, workdir=opts.workdir,
-                     diff=opts.install_diff, debug=opts.debug,
-                     totemp=tmpdir,
-                     showdiff=opts.install_showdiff,
-                     backup_suffix=opts.install_backup_suffix,
-                     diff_cmd=opts.diff_command)
-    return inst
+    return Installer(
+        create=opts.create,
+        backup=opts.backup,
+        dry=opts.dry,
+        safe=opts.safe,
+        base=opts.dotpath,
+        workdir=opts.workdir,
+        diff=opts.install_diff,
+        debug=opts.debug,
+        totemp=tmpdir,
+        showdiff=opts.install_showdiff,
+        backup_suffix=opts.install_backup_suffix,
+        diff_cmd=opts.diff_command,
+    )
 
 
 def _get_templater(opts):
     """get an templater instance"""
-    templ = Templategen(base=opts.dotpath, variables=opts.variables,
-                        func_file=opts.func_file, filter_file=opts.filter_file,
-                        debug=opts.debug)
-    return templ
+    return Templategen(
+        base=opts.dotpath,
+        variables=opts.variables,
+        func_file=opts.func_file,
+        filter_file=opts.filter_file,
+        debug=opts.debug,
+    )
 
 
 def _detail(dotpath, dotfile):
     """display details on all files under a dotfile entry"""
     entry = f'{dotfile.key}'
-    attribs = []
-    attribs.append(f'dst: \"{dotfile.dst}\"')
-    attribs.append(f'link: \"{dotfile.link.name.lower()}\"')
+    attribs = [f'dst: \"{dotfile.dst}\"', f'link: \"{dotfile.link.name.lower()}\"']
     attribs.append(f'chmod: \"{dotfile.chmod}\"')
     attrs = ', '.join(attribs)
     LOG.log(f'{entry} ({attrs})')
@@ -763,12 +756,14 @@ def _detail(dotpath, dotfile):
 def _select(selections, dotfiles):
     selected = []
     for selection in selections:
-        dotfile = next(
-            (x for x in dotfiles
-                if os.path.expanduser(x.dst) == os.path.expanduser(selection)),
-            None
-        )
-        if dotfile:
+        if dotfile := next(
+            (
+                x
+                for x in dotfiles
+                if os.path.expanduser(x.dst) == os.path.expanduser(selection)
+            ),
+            None,
+        ):
             selected.append(dotfile)
         else:
             LOG.err(f'no dotfile matches \"{selection}\"')

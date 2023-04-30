@@ -102,14 +102,15 @@ class Comparator:
             return ''
         if (self.ignore_missing_in_dotdrop and not
                 os.path.exists(local_path)) \
-                or must_ignore([local_path, deployed_path], ignore,
+                    or must_ignore([local_path, deployed_path], ignore,
                                debug=self.debug):
             self.log.dbg(f'ignoring diff {local_path} and {deployed_path}')
             return ''
-        if not os.path.isdir(deployed_path):
-            return f'\"{deployed_path}\" is a file\n'
-
-        return self._compare_dirs(local_path, deployed_path, ignore)
+        return (
+            self._compare_dirs(local_path, deployed_path, ignore)
+            if os.path.isdir(deployed_path)
+            else f'\"{deployed_path}\" is a file\n'
+        )
 
     def _compare_dirs(self, local_path, deployed_path, ignore):
         """compare directories"""
@@ -119,13 +120,14 @@ class Comparator:
 
         # handle files only in deployed dir
         self.log.dbg(f'files only in deployed dir: {comp.left_only}')
-        for i in comp.left_only:
-            if self.ignore_missing_in_dotdrop or \
-               must_ignore([os.path.join(local_path, i)],
-                           ignore, debug=self.debug):
-                continue
-            ret.append(f'=> \"{i}\" does not exist on destination\n')
-
+        ret.extend(
+            f'=> \"{i}\" does not exist on destination\n'
+            for i in comp.left_only
+            if not self.ignore_missing_in_dotdrop
+            and not must_ignore(
+                [os.path.join(local_path, i)], ignore, debug=self.debug
+            )
+        )
         # handle files only in dotpath dir
         self.log.dbg(f'files only in dotpath dir: {comp.right_only}')
         for i in comp.right_only:
@@ -143,7 +145,7 @@ class Comparator:
             source_file = os.path.join(local_path, i)
             deployed_file = os.path.join(deployed_path, i)
             if self.ignore_missing_in_dotdrop and \
-                    not os.path.exists(source_file):
+                        not os.path.exists(source_file):
                 continue
             if must_ignore([source_file, deployed_file],
                            ignore, debug=self.debug):
@@ -161,7 +163,7 @@ class Comparator:
             source_file = os.path.join(local_path, i)
             deployed_file = os.path.join(deployed_path, i)
             if self.ignore_missing_in_dotdrop and \
-                    not os.path.exists(source_file):
+                        not os.path.exists(source_file):
                 continue
             if must_ignore([source_file, deployed_file],
                            ignore, debug=self.debug):

@@ -48,9 +48,8 @@ def side_effect(valid=''):
     """side effect for os.path.exists"""
     def inner(filename):
         print(f'checking if {filename} exists')
-        if filename == valid:
-            return True
-        return False
+        return filename == valid
+
     return inner
 
 
@@ -61,8 +60,7 @@ class TestOptions(unittest.TestCase):
         """from --cli"""
         clean_setup()
         expected = 'fakepath'
-        args = {}
-        args['--cfg'] = expected
+        args = {'--cfg': expected}
         fake = FakeOptions(args)
         self.assertEqual(fake._get_config_path(), expected)
 

@@ -422,16 +422,12 @@ class Updater:
     def _overwrite(self, src, dst):
         """ask for overwritting"""
         msg = f'Overwrite \"{dst}\" with \"{src}\"?'
-        if self.safe and not self.log.ask(msg):
-            return False
-        return True
+        return bool(not self.safe or self.log.ask(msg))
 
     def _confirm_rm_r(self, directory):
         """ask for rm -r directory"""
         msg = f'Recursively remove \"{directory}\"?'
-        if self.safe and not self.log.ask(msg):
-            return False
-        return True
+        return bool(not self.safe or self.log.ask(msg))
 
     def _ignore(self, paths):
         if must_ignore(paths, self.ignores, debug=self.debug):

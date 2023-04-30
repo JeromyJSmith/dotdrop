@@ -138,25 +138,21 @@ class Dotfile(DictParser):
                 out += f'\n{indent}chmod: \"{self.chmod}\"'
 
         out += f'\n{indent}pre-action:'
-        some = self.get_pre_actions()
-        if some:
+        if some := self.get_pre_actions():
             for act in some:
                 out += f'\n{2*indent}- {act}'
 
         out += f'\n{indent}post-action:'
-        some = self.get_post_actions()
-        if some:
+        if some := self.get_post_actions():
             for act in some:
                 out += f'\n{2*indent}- {act}'
 
         out += f'\n{indent}trans_r:'
-        some = self.get_trans_r()
-        if some:
+        if some := self.get_trans_r():
             out += f'\n{2*indent}- {some}'
 
         out += f'\n{indent}trans_w:'
-        some = self.get_trans_w()
-        if some:
+        if some := self.get_trans_w():
             out += f'\n{2*indent}- {some}'
         return out
 

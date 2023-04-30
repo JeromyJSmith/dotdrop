@@ -52,8 +52,7 @@ def get_links(path):
     with open(path, encoding='utf-8') as file:
         content = file.read()
     entries = re.findall(PATTERN, content)
-    urls = list(set(entries))
-    return urls
+    return list(set(entries))
 
 
 def get_session():
@@ -115,9 +114,9 @@ def check_links(urls):
                            timeout=TIMEOUT,
                            allow_redirects=True,
                            headers=HEADERS).status_code
-            if ret not in VALID_RET:
-                print(f'    {RED}[ERROR]{RESET} {url} returned {ret}')
-                return False
+        if ret not in VALID_RET:
+            print(f'    {RED}[ERROR]{RESET} {url} returned {ret}')
+            return False
         print(f'    [{GREEN}OK{RESET}-{verb}-{ret}] {MAGENTA}{url}{RESET}')
     print(f'    {GREEN}OK{RESET} - total {cnt} links checked ({ign} ignored)')
     return True

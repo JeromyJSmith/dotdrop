@@ -76,14 +76,8 @@ class Importer:
             self.log.err(f'\"{path}\" does not exist, ignored!')
             return -1
 
-        # check transw if any
-        trans_write = None
-        trans_read = None
-        if import_transw:
-            trans_write = self.conf.get_trans_w(import_transw)
-        if import_transr:
-            trans_read = self.conf.get_trans_r(import_transr)
-
+        trans_write = self.conf.get_trans_w(import_transw) if import_transw else None
+        trans_read = self.conf.get_trans_r(import_transr) if import_transr else None
         return self._import(path, import_as=import_as,
                             import_link=import_link,
                             import_mode=import_mode,
@@ -128,7 +122,7 @@ class Importer:
             src = strip_home(src)
             self.log.dbg(f'import src for {dst} as {src}')
         # with or without dot prefix
-        strip = '.' + os.sep
+        strip = f'.{os.sep}'
         if self.keepdot:
             strip = os.sep
         src = src.lstrip(strip)
@@ -139,7 +133,7 @@ class Importer:
         # get the link attribute
         linktype = import_link
         if linktype == LinkTypes.LINK_CHILDREN and \
-                not os.path.isdir(path):
+                    not os.path.isdir(path):
             self.log.err(f'importing \"{path}\" failed!')
             return -1
 
@@ -148,13 +142,20 @@ class Importer:
 
         self.log.dbg(f'import dotfile: src:{src} dst:{dst}')
 
-        if not self._import_file(src, dst, trans_write=trans_write):
-            return -1
-
-        return self._import_in_config(path, src, dst, perm, linktype,
-                                      import_mode,
-                                      trans_w=trans_write,
-                                      trans_r=trans_read)
+        return (
+            self._import_in_config(
+                path,
+                src,
+                dst,
+                perm,
+                linktype,
+                import_mode,
+                trans_w=trans_write,
+                trans_r=trans_read,
+            )
+            if self._import_file(src, dst, trans_write=trans_write)
+            else -1
+        )
 
     def _import_in_config(self, path, src, dst, perm,
                           linktype, import_mode,

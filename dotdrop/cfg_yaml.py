@@ -531,8 +531,7 @@ class CfgYaml:
             raise YamlException(err) from exc
 
         if self._dirty_deprecated:
-            warn = 'your config contained deprecated entries'
-            warn += ' and was updated'
+            warn = 'your config contained deprecated entries' + ' and was updated'
             self._log.warn(warn)
 
         self._dirty = False
@@ -703,27 +702,23 @@ class CfgYaml:
         # import_actions
         new = []
         entries = self.settings.get(self.key_import_actions, [])
-        new = self._template_list(entries)
-        if new:
+        if new := self._template_list(entries):
             self.settings[self.key_import_actions] = new
 
         # import_configs
         entries = self.settings.get(self.key_import_configs, [])
-        new = self._template_list(entries)
-        if new:
+        if new := self._template_list(entries):
             self.settings[self.key_import_configs] = new
 
         # import_variables
         entries = self.settings.get(self.key_import_variables, [])
-        new = self._template_list(entries)
-        if new:
+        if new := self._template_list(entries):
             self.settings[self.key_import_variables] = new
 
         # profile's import
         for _, val in self.profiles.items():
             entries = val.get(self.key_import_profile_dfs, [])
-            new = self._template_list(entries)
-            if new:
+            if new := self._template_list(entries):
                 val[self.key_import_profile_dfs] = new
 
     def _norm_actions(self, actions):
@@ -816,10 +811,7 @@ class CfgYaml:
             if self.key_dotfile_src not in val:
                 # add 'src' as key' if not present
                 val[self.key_dotfile_src] = k
-                new[k] = val
-            else:
-                new[k] = val
-
+            new[k] = val
             if self.old_key_trans_r in val:
                 # fix deprecated trans key
                 msg = f'{k} \"trans\" is deprecated, please use \"trans_read\"'
@@ -924,7 +916,7 @@ class CfgYaml:
             if self._debug:
                 msg = f'included {keyitem} from {inherited_profile}: {new}'
                 self._dbg(msg)
-            items.update(new)
+            items |= new
 
         cur = pentry.get(keyitem, {})
         return self._merge_dict(cur, items)
@@ -1196,10 +1188,7 @@ class CfgYaml:
         config = yamldict[self.key_settings]
         if old_key not in config:
             return
-        if config[old_key]:
-            config[newkey] = self.lnk_link
-        else:
-            config[newkey] = self.lnk_nolink
+        config[newkey] = self.lnk_link if config[old_key] else self.lnk_nolink
         del config[old_key]
         self._log.warn('deprecated \"link_by_default\"')
         self._dirty = True
@@ -1326,8 +1315,7 @@ class CfgYaml:
     @classmethod
     def _yaml_load(cls, path):
         """load config file"""
-        is_toml = path.lower().endswith(".toml")
-        if is_toml:
+        if is_toml := path.lower().endswith(".toml"):
             return cls.__toml_load(path), 'toml'
         return cls.__yaml_load(path), 'yaml'
 
@@ -1460,8 +1448,7 @@ class CfgYaml:
 
         #  only keep dotfiles related to the selected profile
         pdfs = []
-        pro = self.profiles.get(self._profile, [])
-        if pro:
+        if pro := self.profiles.get(self._profile, []):
             pdfs = list(pro.get(self.key_profile_dotfiles, []))
 
         # and any included profiles
@@ -1475,11 +1462,7 @@ class CfgYaml:
 
         # if ALL is defined
         if self.key_all not in pdfs:
-            # take a subset of the dotfiles
-            newdotfiles = {}
-            for k, val in dotfiles.items():
-                if k in pdfs:
-                    newdotfiles[k] = val
+            newdotfiles = {k: val for k, val in dotfiles.items() if k in pdfs}
             dotfiles = newdotfiles
 
         for dotfile in dotfiles.values():
@@ -1525,10 +1508,11 @@ class CfgYaml:
         """
         for _, val in self.profiles.items():
             if self.key_profile_include in val and \
-                    val[self.key_profile_include]:
-                new = []
-                for entry in val[self.key_profile_include]:
-                    new.append(self._tmpl.generate_string(entry))
+                        val[self.key_profile_include]:
+                new = [
+                    self._tmpl.generate_string(entry)
+                    for entry in val[self.key_profile_include]
+                ]
                 val[self.key_profile_include] = new
 
         # now get the included ones
@@ -1706,10 +1690,8 @@ class CfgYaml:
             if newv is None:
                 # no None value
                 continue
-            if isinstance(newv, list) and not newv:
-                # no empty list
-                continue
-            new[k] = newv
+            if not isinstance(newv, list) or newv:
+                new[k] = newv
         return new
 
     @classmethod
@@ -1768,8 +1750,10 @@ class CfgYaml:
             err = f'bad version: \"{VERSION}\" VS \"{minversion}\"'
             raise YamlException(err) from exc
         if cur < cfg:
-            err = 'current dotdrop version is too old for that config file.'
-            err += ' Please update.'
+            err = (
+                'current dotdrop version is too old for that config file.'
+                + ' Please update.'
+            )
             raise YamlException(err)
 
     def _debug_entries(self):

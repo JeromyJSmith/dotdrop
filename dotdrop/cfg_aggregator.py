@@ -161,9 +161,7 @@ class CfgAggregator:
 
     def save(self):
         """save the config"""
-        if self.dry:
-            return True
-        return self.cfgyaml.save()
+        return True if self.dry else self.cfgyaml.save()
 
     def dump(self):
         """dump the config dictionary"""
@@ -183,10 +181,7 @@ class CfgAggregator:
 
     def get_profile(self, key=None):
         """return profile object"""
-        pro = self.profile_key
-        if key:
-            pro = key
-
+        pro = key if key else self.profile_key
         try:
             return next(x for x in self.profiles if x.key == pro)
         except StopIteration:
@@ -209,9 +204,9 @@ class CfgAggregator:
         """
         if profile_key == self.cfgyaml.key_all:
             return self.dotfiles
-        dotfiles = []
         profile = self.get_profile(key=profile_key)
         if not profile:
+            dotfiles = []
             return dotfiles
         return profile.dotfiles
 
@@ -222,10 +217,10 @@ class CfgAggregator:
         """
         dfs = self.dotfiles
         if profile_key:
-            profile = self.get_profile(key=profile_key)
-            if not profile:
+            if profile := self.get_profile(key=profile_key):
+                dfs = profile.dotfiles
+            else:
                 return None
-            dfs = profile.dotfiles
         try:
             return next(x for x in dfs
                         if x.key == key)
@@ -248,14 +243,19 @@ class CfgAggregator:
             trans_r_key = trans_read.key
         if trans_write:
             trans_w_key = trans_write.key
-        if not self.cfgyaml.add_dotfile(key, src, dst, link,
-                                        chmod=chmod,
-                                        trans_r_key=trans_r_key,
-                                        trans_w_key=trans_w_key):
-            return None
-        return Dotfile(key, dst, src,
-                       trans_r=trans_read,
-                       trans_w=trans_write)
+        return (
+            Dotfile(key, dst, src, trans_r=trans_read, trans_w=trans_write)
+            if self.cfgyaml.add_dotfile(
+                key,
+                src,
+                dst,
+                link,
+                chmod=chmod,
+                trans_r_key=trans_r_key,
+                trans_w_key=trans_w_key,
+            )
+            else None
+        )
 
     ########################################################
     # parsing
@@ -532,15 +532,13 @@ class CfgAggregator:
     def _get_action_w_args(self, key):
         """return action by key with the arguments"""
         fields = shlex.split(key)
-        if len(fields) > 1:
-            # we have args
-            key, *args = fields
-            msg = f'action with parm: {key} and {args}'
-            self.log.dbg(msg)
-            action = self._get_action(key).copy(args)
-        else:
-            action = self._get_action(key)
-        return action
+        if len(fields) <= 1:
+            return self._get_action(key)
+        # we have args
+        key, *args = fields
+        msg = f'action with parm: {key} and {args}'
+        self.log.dbg(msg)
+        return self._get_action(key).copy(args)
 
     def _get_trans_w_args(self, getter):
         """return transformation by key with the arguments"""

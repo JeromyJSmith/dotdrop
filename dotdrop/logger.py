@@ -96,7 +96,7 @@ class Logger:
         """ask user for confirmation"""
         cstart = self._color(self.BLUE)
         cend = self._color(self.RESET)
-        question = query + ' [y/N] ? '
+        question = f'{query} [y/N] ? '
         qmsg = f'{cstart}{question}{cend}'
         resp = input(qmsg)
         return resp == 'y'
@@ -104,6 +104,4 @@ class Logger:
     @classmethod
     def _color(cls, col):
         """is color supported"""
-        if not sys.stdout.isatty():
-            return ''
-        return col
+        return col if sys.stdout.isatty() else ''
